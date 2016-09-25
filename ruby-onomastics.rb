@@ -18,7 +18,6 @@ ARGF.each do |line| # O(n), n lines in the training set.
   ctzp = JSON.parse(ctzp)
 
   longest_name_size = name.size if name.size > longest_name_size
-  data.merge!(name => ctzp) # The ! is important
+  data[name] = ctzp
   ctzp.each { |f| all_citizenships[f] }
 end
-
