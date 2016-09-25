@@ -30,7 +30,7 @@ curl https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.bz2 | gzi
 The resulting file is around 45 MB (Sept. 24, 2016). Its format is quite awesome :exclamation:
 
 ```text
-<first name 1> <first name 2> ... <last name>,["<ID for country 1>", "<ID for country 2>", ...]
+<first name 1> <first name 2> ... <last name>;["<ID for country 1>", "<ID for country 2>", ...]
 ```
 
 With that, we can do some serious work. :guitar: :star2:
