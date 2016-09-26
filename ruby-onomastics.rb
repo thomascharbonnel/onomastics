@@ -4,7 +4,19 @@
 require 'json/ext'
 require 'ruby-fann'
 require 'pp'
-require 'parallel'
+
+class String
+  @@not_null_regex = Regexp.new(/[^\x00]/)
+
+  def to_a
+    array = Array.new(size, 0)
+    start = index(@@not_null_regex)
+    start.upto(size-1) do |i|
+      array[i] = self[i].ord
+    end
+    array
+  end
+end
 
 start_time = Time.now
 
@@ -34,9 +46,9 @@ all_citizenships.freeze
 # Now, a bit of data conversion.
 
 # A little bit clearer variable names.
-blank_output = '0' * all_citizenships.size
+blank_output = "\x00" * all_citizenships.size
 blank_output.freeze # Can't touch this, hmm hmm hmm hmm, hm hm, hm hm.
-blank_input = '0' * longest_name_size
+blank_input = "\x00" * longest_name_size
 blank_input.freeze
 
 # One should note that string operations are fast while arry operations are
@@ -50,18 +62,17 @@ blank_input.freeze
 inputs = [] # An array of names, all have the same size, 0 as left padding.
 outputs = [] # An array of binary arrays (1 has that country of ctzp, 0 not).
 # There's way too much data to use fancy maps and stuff, KISS.
-data.each do |name, ctzp|
+data.each_with_index do |(name, ctzp), index|
+  puts "\tIteration ##{index}" if index % 100_000 == 0
+
   input = blank_input.dup
   input[input.size-name.size..input.size] = name
-  inputs << input
+  inputs << input.to_a
 
   output = blank_output.dup
-  ctzp.each { |c| output[all_citizenships[c]] = '1' }
-  outputs << output
+  ctzp.each { |c| output[all_citizenships[c]] = "\x01" }
+  outputs << output.to_a
 end
-
-inputs = Parallel.map(inputs) { |e| e.chars.map!(&:ord) }
-outputs = Parallel.map(outputs) { |e| e.chars.map!(&:ord) }
 
 training_data_time = Time.now
 puts "Raw training data generated in #{training_data_time - import_time} " \
@@ -70,7 +81,7 @@ puts "Raw training data generated in #{training_data_time - import_time} " \
 # ANN, Let's do this!
 # Oh yeah, this ANN is gonna be fed.
 train = RubyFann::TrainData.new(:inputs => inputs, :desired_outputs => outputs)
-ann = RubyFann::Standard.new(:num_inputs => input_length, :hidden_neurons => [(input_length * 1.3).to_i, (input_length * 0.7).to_i, input_length], :num_outputs => all_citizenships.size)
+ann = RubyFann::Standard.new(:num_inputs => longest_name_size, :hidden_neurons => [(longest_name_size * 1.3).to_i, (longest_name_size * 0.7).to_i, longest_name_size], :num_outputs => all_citizenships.size)
 ann.train_on_data(train, 10_000_000, 20, 0.01)
 
 ann_fed_time = Time.now
