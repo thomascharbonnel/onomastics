@@ -4,6 +4,7 @@
 require 'json/ext'
 require 'ruby-fann'
 require 'pp'
+require 'parallel'
 
 start_time = Time.now
 
@@ -28,6 +29,8 @@ end
 import_time = Time.now
 puts "Data imported in #{import_time - start_time} seconds."
 
+all_citizenships.freeze
+
 # Now, a bit of data conversion.
 
 # A little bit clearer variable names.
@@ -50,12 +53,15 @@ outputs = [] # An array of binary arrays (1 has that country of ctzp, 0 not).
 data.each do |name, ctzp|
   input = blank_input.dup
   input[input.size-name.size..input.size] = name
-  inputs << input.chars.map!(&:ord) # This is slow :(
+  inputs << input
 
   output = blank_output.dup
   ctzp.each { |c| output[all_citizenships[c]] = '1' }
-  outputs << output.chars.map!(&:ord) # This is slow :(
+  outputs << output
 end
+
+inputs = Parallel.map(inputs) { |e| e.chars.map!(&:ord) }
+outputs = Parallel.map(outputs) { |e| e.chars.map!(&:ord) }
 
 training_data_time = Time.now
 puts "Raw training data generated in #{training_data_time - import_time} " \
